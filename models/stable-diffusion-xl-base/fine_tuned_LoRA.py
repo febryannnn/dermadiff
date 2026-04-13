@@ -98,11 +98,44 @@ def build_metadata_jsonl(cls_data_dir: str, caption: str) -> int:
     return count
 
 
+def resolve_train_script(diffusers_dir):
+    """Locate the LoRA training script.
+
+    Priority order:
+    1. If --diffusers_dir was provided → use that clone's examples/ folder
+    2. Otherwise → use the bundled script next to this wrapper
+       (models/stable-diffusion-xl-base/train_text_to_image_lora_sdxl.py)
+    3. Return None if neither is found.
+
+    The bundled script is sourced from diffusers v0.37.1 and is pinned as
+    part of the repo for full reproducibility. Pass --diffusers_dir only if
+    you want to override with a newer/different version.
+    """
+    if diffusers_dir:
+        candidate = os.path.join(
+            diffusers_dir, "examples/text_to_image/train_text_to_image_lora_sdxl.py"
+        )
+        if os.path.exists(candidate):
+            return candidate
+        print(f"  WARNING: --diffusers_dir was given but no script at {candidate}")
+        return None
+
+    # Bundled script lives next to this wrapper file
+    bundled = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "train_text_to_image_lora_sdxl.py",
+    )
+    if os.path.exists(bundled):
+        return bundled
+
+    return None
+
+
 def train_lora_for_class(
     cls_name: str,
     train_data_dir: str,
     output_dir: str,
-    diffusers_dir: str,
+    train_script: str,
 ) -> bool:
     """Train one SDXL LoRA adapter for a single skin lesion class."""
 
@@ -129,13 +162,6 @@ def train_lora_for_class(
         return False
 
     max_steps = get_max_steps(n_images)
-    train_script = os.path.join(
-        diffusers_dir, "examples/text_to_image/train_text_to_image_lora_sdxl.py"
-    )
-    if not os.path.exists(train_script):
-        print(f"  ERROR: training script not found at {train_script}")
-        print(f"  Expected path: diffusers/examples/text_to_image/train_text_to_image_lora_sdxl.py")
-        return False
 
     print(f"\n{'=' * 60}")
     print(f"  Training LoRA for: {cls_name}")
@@ -194,14 +220,27 @@ def main():
         help="Output directory for LoRA weights (one lora_{class}_final/ subdir per class)"
     )
     parser.add_argument(
-        "--diffusers_dir", required=True,
-        help="Path to the cloned huggingface/diffusers repository"
+        "--diffusers_dir", default=None,
+        help="Optional path to a cloned huggingface/diffusers repository. "
+             "If not provided, the script uses the bundled "
+             "train_text_to_image_lora_sdxl.py (sourced from diffusers v0.37.1) "
+             "that lives next to this wrapper."
     )
     parser.add_argument(
         "--classes", nargs="+", default=TARGET_CLASSES,
         help=f"Which classes to train (default: {' '.join(TARGET_CLASSES)})"
     )
     args = parser.parse_args()
+
+    # Resolve the training script once, up front — fail fast if missing
+    train_script = resolve_train_script(args.diffusers_dir)
+    if train_script is None:
+        print("ERROR: could not find a LoRA training script.")
+        print("  Either:")
+        print("  1. Place train_text_to_image_lora_sdxl.py next to this wrapper, OR")
+        print("  2. Pass --diffusers_dir pointing at a cloned diffusers repo")
+        sys.exit(1)
+    print(f"Using training script: {train_script}")
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -232,7 +271,7 @@ def main():
     total_start = time.time()
     for cls in args.classes:
         results[cls] = train_lora_for_class(
-            cls, args.train_data_dir, args.output_dir, args.diffusers_dir
+            cls, args.train_data_dir, args.output_dir, train_script
         )
 
     total_min = (time.time() - total_start) / 60
