@@ -1,0 +1,20 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Local Python virtualenvs
+venv/
+env/
+.venv/
+
+# Local outputs (intermediate experiment artifacts)
+outputs/
+/tmp/
