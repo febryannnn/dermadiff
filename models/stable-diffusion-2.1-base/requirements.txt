@@ -1,0 +1,25 @@
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Diffusion & Transformers stack =
+diffusers==0.30.3
+transformers==4.44.2
+accelerate==0.34.2
+peft>=0.12.0
+bitsandbytes>=0.43.0
+
+# HuggingFace ecosystem
+huggingface-hub>=0.24.0
+datasets>=2.20.0
+safetensors>=0.4.3
+
+# Image processing
+pillow>=10.0.0
+
+# Data & utilities
+numpy>=1.24.0
+pandas>=2.0.0
+tqdm>=4.66.0
+
+# Visualization
+matplotlib>=3.7.0
