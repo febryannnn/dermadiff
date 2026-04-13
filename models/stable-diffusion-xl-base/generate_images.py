@@ -181,9 +181,17 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate synthetic dermoscopic images using SDXL + LoRA"
     )
+    # Default --lora_dir to the in-repo "LoRA Weights" folder that lives
+    # next to this script. Computed from __file__ so it works regardless
+    # of which directory the user runs the script from.
+    DEFAULT_LORA_DIR = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "LoRA Weights"
+    )
+
     parser.add_argument(
-        "--lora_dir", required=True,
-        help="Directory containing per-class LoRA weight subdirectories"
+        "--lora_dir", default=DEFAULT_LORA_DIR,
+        help=f"Directory containing per-class LoRA weight subdirectories "
+             f"(default: in-repo LoRA Weights folder at {DEFAULT_LORA_DIR})"
     )
     parser.add_argument(
         "--output_dir", required=True,

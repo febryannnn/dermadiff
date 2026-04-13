@@ -80,11 +80,79 @@ idempotent and only applied once per checkout.
 newer timm versions break PanDerm's ViT loading code. This is a documented
 PanDerm constraint, not specific to DermaDiff.
 
-You also need:
-- HAM10000 dataset and `HAM10000_metadata.csv`
-- ISIC 2019 dataset organized into per-class subfolders
-- (Optional) Longitudinal dataset with Excel metadata sheets
-- Pretrained PanDerm checkpoint (`panderm_ll_data6_checkpoint-499.pth`)
+You also need the pretrained PanDerm checkpoint
+(`panderm_ll_data6_checkpoint-499.pth`) — download manually from the PanDerm
+GitHub release page: https://github.com/SiyuanYan1/PanDerm
+
+## Dataset Access
+
+DermaDiff uses three datasets, each with different access requirements. Only
+HAM10000 is strictly required — ISIC 2019 and the longitudinal dataset are
+optional augmentation sources that improve LoRA training quality when
+available.
+
+### 1. HAM10000 (required) — auto-downloadable
+
+HAM10000 (Tschandl et al., 2018) is hosted on Harvard Dataverse under a
+non-commercial research license and can be downloaded programmatically via
+the Dataverse API:
+
+```bash
+python dataset/ham10000.py --output_dir ./data/ham10000
+```
+
+This script fetches `HAM10000_images_part_1.zip`, `HAM10000_images_part_2.zip`,
+and the metadata file, then unpacks everything into the layout that Phase 0
+expects: `data/ham10000/images/` (all 10,015 images flat) and
+`data/ham10000/HAM10000_metadata.csv`. Download size is roughly 5.2 GB and
+takes 10-20 minutes depending on your connection. The script is idempotent —
+re-running it is a no-op once the data is in place.
+
+Manual alternative: https://doi.org/10.7910/DVN/DBW86T (Harvard Dataverse).
+Download the two image zips + metadata, unpack into the same layout above.
+
+### 2. ISIC 2019 (optional) — auto-downloadable
+
+Used as a supplementary source for LoRA training images. Your teammate's
+`dataset/isic2019.py` script handles the download. See that script's
+docstring for exact usage.
+
+Phase 0 works without ISIC 2019 if you omit the `--isic_images` flag —
+only HAM10000 train-split images will be used for LoRA training, which
+produces weaker LoRAs for small classes (df, vasc) but is still functional.
+
+### 3. Longitudinal Dataset (optional) — access-restricted, manual only
+
+The longitudinal dermoscopic dataset used for the published DermaDiff C3
+results originates from the University of Queensland (UQ) and is
+access-restricted. **It cannot be redistributed in this repository**, and
+there is no download script. If you want to reproduce the exact published
+training pool:
+
+1. Request access to the UQ longitudinal dermoscopic dataset through the
+   original authors or your institution's data access process.
+2. Download the full `dataset.zip` (~66 GB) from the UQ-provided source.
+3. Extract it locally so that the expected directory layout looks like:
+   ```
+   data/longitudinal/
+   └── dermoscopic_extracted/
+       └── 866990d01449152d_NIMARE-A11453_A11453/
+           └── data/
+               └── Dermoscopic Images/
+                   ├── HighRisk Dermoscopic images.xlsx
+                   ├── General Dermosopic images.xlsx
+                   └── <image files in nested subfolders>
+   ```
+4. Pass the extraction root as `--longitudinal_dir` and both Excel files
+   as `--longitudinal_metadata` when running Phase 0.
+
+**If you don't have longitudinal access**, skip this step entirely — omit
+`--longitudinal_dir` and `--longitudinal_metadata` from the Phase 0
+command. Phase 0 will gracefully fall back to using only HAM10000 (and
+optionally ISIC 2019) for the per-class training pool. The resulting LoRAs
+will train on fewer minority-class images, which may slightly reduce
+downstream classifier performance — the published C3 Macro F1 = 0.8409 was
+achieved with all three sources combined.
 
 ## Phase 0 — Dataset Preparation (root)
 

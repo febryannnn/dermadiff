@@ -49,6 +49,37 @@ INV_LABEL_MAP = {v: k for k, v in LABEL_MAP.items()}
 CLASS_NAMES = [INV_LABEL_MAP[i] for i in range(NUM_CLASSES)]
 
 
+def patch_panderm_torch_load(panderm_dir: str) -> None:
+    """Patch PanDerm's run_class_finetuning.py for PyTorch 2.6+ compatibility.
+
+    PyTorch 2.6 changed the default of `torch.load(weights_only=True)`, which
+    refuses to load checkpoints containing numpy scalars — which PanDerm
+    checkpoints do. We override by adding `weights_only=False` to the
+    relevant calls. Idempotent.
+    """
+    finetune_file = os.path.join(panderm_dir, "classification/run_class_finetuning.py")
+    if not os.path.exists(finetune_file):
+        return
+
+    with open(finetune_file, "r") as f:
+        code = f.read()
+
+    if "weights_only=False" in code:
+        return  # already patched
+
+    code = code.replace(
+        "torch.load(model_weight)",
+        "torch.load(model_weight, weights_only=False)",
+    )
+    code = code.replace(
+        "torch.load(args.resume",
+        "torch.load(args.resume, weights_only=False",
+    )
+    with open(finetune_file, "w") as f:
+        f.write(code)
+    print("Patched PanDerm torch.load calls for PyTorch 2.6+ compatibility")
+
+
 def run_panderm_eval(
     panderm_dir: str,
     checkpoint: str,
@@ -63,6 +94,9 @@ def run_panderm_eval(
     """
     os.makedirs(output_dir, exist_ok=True)
     os.environ["WANDB_MODE"] = "disabled"
+
+    # Apply the torch.load patch before calling PanDerm's script
+    patch_panderm_torch_load(panderm_dir)
 
     classification_dir = os.path.join(panderm_dir, "classification")
     cmd = [
