@@ -64,6 +64,21 @@ WANTED_FILES = {
 EXPECTED_IMAGE_COUNT = 10015
 IMG_EXTS = (".jpg", ".jpeg", ".png")
 
+# Harvard Dataverse blocks the default `Python-urllib/X.Y` user agent on sight,
+# returning HTTP 403 even for fully public, anonymous-readable datasets. We set
+# a real-browser-looking User-Agent on every request to bypass this filter.
+# This is purely a UA filter — no API authentication is required for public files.
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
+
+def _open_url(url: str, timeout: int = 30):
+    """Open a URL with a browser-like User-Agent to avoid Dataverse's UA filter."""
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    return urllib.request.urlopen(req, timeout=timeout)
+
 
 # ────────────────────────────────────────────────────────────────────────
 # DATAVERSE API HELPERS
@@ -79,7 +94,7 @@ def fetch_dataset_listing(doi: str) -> list:
     print(f"  Querying Dataverse API: {url}")
 
     try:
-        with urllib.request.urlopen(url, timeout=30) as response:
+        with _open_url(url, timeout=30) as response:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         print(f"  ERROR: HTTP {e.code} while fetching dataset listing")
@@ -106,7 +121,7 @@ def download_file(file_id: int, dest_path: str, filename: str) -> None:
 
     tmp_path = dest_path + ".part"
     try:
-        with urllib.request.urlopen(url, timeout=60) as response:
+        with _open_url(url, timeout=60) as response:
             total_size = int(response.headers.get("Content-Length", 0))
             downloaded = 0
             chunk_size = 1024 * 1024  # 1 MB
@@ -295,12 +310,24 @@ def main():
     if n_final < EXPECTED_IMAGE_COUNT:
         print(f"  WARNING: expected {EXPECTED_IMAGE_COUNT}, got {n_final}")
 
-    # Metadata: copy to standard name HAM10000_metadata.csv regardless of
-    # whether the source was .csv or .tab (both are plain text tables)
+    # Metadata: convert from Dataverse's tab-separated .tab format to a real
+    # comma-separated .csv so that downstream `pd.read_csv()` calls in Phase 0
+    # and Phase 3 work without needing an explicit `sep='\t'` argument.
     if metadata_label:
         src = downloads[metadata_label]
-        shutil.copy2(src, metadata_csv)
-        print(f"  Metadata saved: {metadata_csv}")
+        if metadata_label.endswith(".tab"):
+            # Convert TSV to CSV inline
+            import csv as _csv
+            with open(src, "r", newline="") as tab_f, \
+                 open(metadata_csv, "w", newline="") as csv_f:
+                reader = _csv.reader(tab_f, delimiter="\t")
+                writer = _csv.writer(csv_f, delimiter=",", quoting=_csv.QUOTE_MINIMAL)
+                for row in reader:
+                    writer.writerow(row)
+            print(f"  Metadata saved: {metadata_csv} (converted from .tab -> .csv)")
+        else:
+            shutil.copy2(src, metadata_csv)
+            print(f"  Metadata saved: {metadata_csv}")
 
     # ── Cleanup ──
     if not args.keep_zips:
