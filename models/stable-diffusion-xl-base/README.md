@@ -62,7 +62,7 @@ python models/stable-diffusion-xl-base/generate_images.py \
 ## Phase 3 — PanDerm Classifier Training
 
 ```bash
-python models/stable-diffusion-xl-base/panderm_classifiers.py \
+python models/stable-diffusion-xl-base/classifiers_training_LoRA.py \
     --ham_images ./data/ham10000/images \
     --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
     --splits_json ./outputs/ham10000_splits.json \
