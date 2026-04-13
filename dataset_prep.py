@@ -24,7 +24,7 @@ This script does four things:
 
 Usage
 -----
-    python 0_dataset_prep.py \\
+    python dataset_prep.py \\
         --ham_images /path/to/ham10000/images \\
         --ham_metadata /path/to/HAM10000_metadata.csv \\
         --isic_images /path/to/isic2019/images \\

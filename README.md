@@ -30,7 +30,7 @@ hypothesis.
 
 ```
 dermadiff/
-├── 0_dataset_prep.py                          # Phase 0 — shared, builds HAM splits + per-class pool
+├── dataset_prep.py                          # Phase 0 — shared, builds HAM splits + per-class pool
 ├── dataset/
 │   ├── ham10000.py                            # HAM10000 downloader (Harvard Dataverse API)
 │   └── isic2019.py                            # ISIC 2019 downloader (teammate's)
@@ -45,7 +45,7 @@ dermadiff/
 │   ├── stable-diffusion-xl-base/              # Exp C — SDXL LoRA (rank 16)
 │   │   ├── fine_tuned_LoRA.py                 # Phase 1 — LoRA fine-tuning wrapper
 │   │   ├── generate_images.py                 # Phase 2 — synthetic generation
-│   │   ├── panderm_classifiers.py             # Phase 3 — classifier training
+│   │   ├── classifiers_training_LoRA.py        # Phase 3 — classifier training
 │   │   ├── evaluation.py                      # Phase 4 — test set evaluation
 │   │   ├── train_text_to_image_lora_sdxl.py   # Bundled from diffusers v0.37.1
 │   │   └── LoRA Weights/                      # Pre-trained LoRAs (~440 MB)
@@ -53,7 +53,7 @@ dermadiff/
 │   └── stable-diffusion-xl-base-dora/         # Exp E — SDXL DoRA (rank 8)
 │       ├── fine_tuned_DoRA.py                 # Phase 1 — DoRA fine-tuning wrapper
 │       ├── generate_images.py                 # Phase 2 — synthetic generation
-│       ├── panderm_classifiers.py             # Phase 3 — shared logic with Exp C
+│       ├── classifiers_training_DoRA.py        # Phase 3 — shared logic with Exp C
 │       ├── evaluation.py                      # Phase 4 — shared logic with Exp C
 │       ├── train_dreambooth_lora_sdxl.py       # Bundled from diffusers v0.37.1
 │       └── LoRA Weights/                      # Pre-trained DoRAs (~240 MB)
@@ -196,7 +196,7 @@ pool for Phase 1. Critical filtering: HAM10000 contributes **train split only**,
 ISIC 2019 and longitudinal contribute all images.
 
 ```bash
-python 0_dataset_prep.py \
+python dataset_prep.py \
     --ham_images ./data/ham10000/images \
     --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
     --isic_images ./data/isic2019/images \

@@ -69,7 +69,7 @@ This script is identical to the Exp C version — the classifier trains on
 real + synthetic images regardless of which generator produced them.
 
 ```bash
-python models/stable-diffusion-xl-base-dora/panderm_classifiers.py \
+python models/stable-diffusion-xl-base-dora/classifiers_training_DoRA.py \
     --ham_images ./data/ham10000/images \
     --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
     --splits_json ./outputs/ham10000_splits.json \
