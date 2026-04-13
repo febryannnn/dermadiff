@@ -8,23 +8,29 @@ variants (e.g., SD 2.1 under `models/stable-diffusion-2.1-base/`).
 
 ```
 dermadiff/
-├── 0_dataset_prep.py              # Phase 0 — shared, builds HAM splits + per-class pool
-├── dataset/                        # External dataset utilities (e.g., isic2019.py)
+├── 0_dataset_prep.py                # Phase 0 — shared, builds HAM splits + per-class pool
+├── dataset/                          # External dataset utilities
+│   ├── ham10000.py                  # HAM10000 downloader (Harvard Dataverse API)
+│   └── isic2019.py                  # ISIC 2019 downloader (teammate's)
 ├── models/
-│   ├── stable-diffusion-2.1-base/  # C2 — teammate's SD 2.1 LoRA
+│   ├── stable-diffusion-2.1-base/   # C2 — teammate's SD 2.1 LoRA
 │   │   ├── fine_tuned_LoRA.py
 │   │   ├── generate_images.py
 │   │   ├── panderm_classifiers.py
 │   │   ├── evaluation.py
 │   │   └── LoRA Weights/
 │   │       └── lora_{class}_final/
-│   └── stable-diffusion-xl-base/   # C3 — this work (SDXL LoRA)
-│       ├── fine_tuned_LoRA.py     # Phase 1 — LoRA fine-tuning
-│       ├── generate_images.py     # Phase 2 — synthetic generation
-│       ├── panderm_classifiers.py # Phase 3 — classifier training
-│       ├── evaluation.py          # Phase 4 — test set evaluation
-│       └── LoRA Weights/
-│           └── lora_{class}_final/   # auto-created by Phase 1
+│   └── stable-diffusion-xl-base/    # C3 — this work (SDXL LoRA)
+│       ├── fine_tuned_LoRA.py       # Phase 1 — LoRA fine-tuning
+│       ├── generate_images.py       # Phase 2 — synthetic generation
+│       ├── panderm_classifiers.py   # Phase 3 — classifier training
+│       ├── evaluation.py            # Phase 4 — test set evaluation
+│       └── LoRA Weights/            # ✓ Pre-trained LoRAs included (~440 MB)
+│           ├── lora_mel_final/pytorch_lora_weights.safetensors
+│           ├── lora_bcc_final/pytorch_lora_weights.safetensors
+│           ├── lora_akiec_final/pytorch_lora_weights.safetensors
+│           ├── lora_df_final/pytorch_lora_weights.safetensors
+│           └── lora_vasc_final/pytorch_lora_weights.safetensors
 ├── README.md
 └── requirements.txt
 ```
@@ -180,6 +186,20 @@ Outputs:
 
 ## Phase 1 — SDXL LoRA Fine-tuning
 
+> **⚡ Skip Phase 1 — Pre-trained LoRAs are included in this repo**
+>
+> The five SDXL LoRA adapters used for the published C3 results
+> (Macro F1 = 0.8409) are bundled in this repository at
+> `models/stable-diffusion-xl-base/LoRA Weights/lora_{class}_final/`. If you
+> just want to reproduce the experiment results, you can skip Phase 1 entirely
+> and go straight to Phase 2 — generation will use the bundled LoRAs by default.
+>
+> Phase 1 is only needed if you want to retrain the LoRAs from scratch (e.g.,
+> on a different dataset, with different hyperparameters, or with a different
+> set of source images).
+
+If you do want to re-train:
+
 ```bash
 python models/stable-diffusion-xl-base/fine_tuned_LoRA.py \
     --train_data_dir ./outputs/training_images_per_class \
@@ -207,11 +227,14 @@ Crash-safe: skips classes whose LoRA already exists.
 
 ## Phase 2 — Synthetic Image Generation
 
+The bundled LoRA weights are loaded automatically — `--lora_dir` defaults to
+`models/stable-diffusion-xl-base/LoRA Weights/` (next to the script), so you
+only need to specify it if you trained your own LoRAs to a different location.
+
 Auto mode (recommended — derives counts from Phase 0 splits):
 
 ```bash
 python models/stable-diffusion-xl-base/generate_images.py \
-    --lora_dir "./models/stable-diffusion-xl-base/LoRA Weights" \
     --output_dir ./outputs/synthetic_images \
     --splits_json ./outputs/ham10000_splits.json \
     --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
@@ -222,9 +245,19 @@ Manual mode (if you don't want to use Phase 0 outputs):
 
 ```bash
 python models/stable-diffusion-xl-base/generate_images.py \
-    --lora_dir "./models/stable-diffusion-xl-base/LoRA Weights" \
     --output_dir ./outputs/synthetic_images \
     --train_counts mel=779 bcc=360 akiec=229 df=81 vasc=99 \
+    --ratio 2
+```
+
+Custom LoRA directory (if you re-trained Phase 1 to a non-default path):
+
+```bash
+python models/stable-diffusion-xl-base/generate_images.py \
+    --lora_dir /path/to/your/lora/weights \
+    --output_dir ./outputs/synthetic_images \
+    --splits_json ./outputs/ham10000_splits.json \
+    --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
     --ratio 2
 ```
 
