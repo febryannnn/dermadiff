@@ -30,7 +30,7 @@ hypothesis.
 
 ```
 dermadiff/
-├── 0_dataset_prep.py                          # Phase 0 — shared, builds HAM splits + per-class pool
+├── dataset_prep.py                          # Phase 0 — shared, builds HAM splits + per-class pool
 ├── dataset/
 │   ├── ham10000.py                            # HAM10000 downloader (Harvard Dataverse API)
 │   └── isic2019.py                            # ISIC 2019 downloader (teammate's)
@@ -196,7 +196,7 @@ pool for Phase 1. Critical filtering: HAM10000 contributes **train split only**,
 ISIC 2019 and longitudinal contribute all images.
 
 ```bash
-python 0_dataset_prep.py \
+python dataset_prep.py \
     --ham_images ./data/ham10000/images \
     --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
     --isic_images ./data/isic2019/images \

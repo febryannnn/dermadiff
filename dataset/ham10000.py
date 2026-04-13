@@ -345,7 +345,7 @@ def main():
         size_kb = os.path.getsize(metadata_csv) / 1024
         print(f"  Metadata: {metadata_csv} ({size_kb:.0f} KB)")
     print()
-    print(f"Next: pass these paths to 0_dataset_prep.py:")
+    print(f"Next: pass these paths to dataset_prep.py:")
     print(f"  --ham_images   {images_dir}")
     print(f"  --ham_metadata {metadata_csv}")
 
