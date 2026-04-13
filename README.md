@@ -1,36 +1,63 @@
-# DermaDiff — SDXL LoRA Pipeline
+# DermaDiff
 
-This directory contains the DermaDiff Stable Diffusion XL + LoRA experiment
-scripts, structured to match the repo convention used by the other generator
-variants (e.g., SD 2.1 under `models/stable-diffusion-2.1-base/`).
+DermaDiff investigates whether diffusion-based synthetic augmentation improves
+classification of rare minority classes in the HAM10000 skin lesion dataset.
+Multiple diffusion generators are compared by training a PanDerm ViT-Large
+classifier on real + synthetic images and measuring Macro F1 across all 7
+diagnostic classes.
+
+Pre-trained adapter weights are bundled in the repo, so results can be
+reproduced from the generation phase onward without GPU-intensive fine-tuning.
+
+## Experiment Overview
+
+| Experiment | Generator | Rank | Published Macro F1 |
+|---|---|---|---|
+| Exp A (baseline) | None (real HAM10000 only) | — | 0.8114 |
+| Exp B | SD 2.1 LoRA (teammate's) | — | 0.8218 |
+| **Exp C** | **SDXL LoRA** | **16** | **0.8409** |
+| Exp D | SD 3.5 Large | — | 0.8482 |
+| **Exp E** | **SDXL DoRA** | **8** | **0.8471** |
+
+**Key finding:** Exp E matches Exp D's classification benefit with a 3x
+smaller adapter (rank 8 vs rank 16) and a smaller base model (SDXL vs SD 3.5).
+FID and downstream Macro F1 are inversely correlated — Exp D has the worst FID
+(235.0) but the best classification benefit. LPIPS diversity is the strongest
+predictor of downstream improvement, supporting the "diversity-over-fidelity"
+hypothesis.
 
 ## Repo Layout
 
 ```
 dermadiff/
-├── 0_dataset_prep.py                # Phase 0 — shared, builds HAM splits + per-class pool
-├── dataset/                          # External dataset utilities
-│   ├── ham10000.py                  # HAM10000 downloader (Harvard Dataverse API)
-│   └── isic2019.py                  # ISIC 2019 downloader (teammate's)
+├── 0_dataset_prep.py                          # Phase 0 — shared, builds HAM splits + per-class pool
+├── dataset/
+│   ├── ham10000.py                            # HAM10000 downloader (Harvard Dataverse API)
+│   └── isic2019.py                            # ISIC 2019 downloader (teammate's)
 ├── models/
-│   ├── stable-diffusion-2.1-base/   # C2 — teammate's SD 2.1 LoRA
+│   ├── stable-diffusion-2.1-base/             # Exp B — teammate's SD 2.1 LoRA
 │   │   ├── fine_tuned_LoRA.py
 │   │   ├── generate_images.py
 │   │   ├── panderm_classifiers.py
 │   │   ├── evaluation.py
 │   │   └── LoRA Weights/
 │   │       └── lora_{class}_final/
-│   └── stable-diffusion-xl-base/    # C3 — this work (SDXL LoRA)
-│       ├── fine_tuned_LoRA.py       # Phase 1 — LoRA fine-tuning
-│       ├── generate_images.py       # Phase 2 — synthetic generation
-│       ├── panderm_classifiers.py   # Phase 3 — classifier training
-│       ├── evaluation.py            # Phase 4 — test set evaluation
-│       └── LoRA Weights/            # ✓ Pre-trained LoRAs included (~440 MB)
-│           ├── lora_mel_final/pytorch_lora_weights.safetensors
-│           ├── lora_bcc_final/pytorch_lora_weights.safetensors
-│           ├── lora_akiec_final/pytorch_lora_weights.safetensors
-│           ├── lora_df_final/pytorch_lora_weights.safetensors
-│           └── lora_vasc_final/pytorch_lora_weights.safetensors
+│   ├── stable-diffusion-xl-base/              # Exp C — SDXL LoRA (rank 16)
+│   │   ├── fine_tuned_LoRA.py                 # Phase 1 — LoRA fine-tuning wrapper
+│   │   ├── generate_images.py                 # Phase 2 — synthetic generation
+│   │   ├── panderm_classifiers.py             # Phase 3 — classifier training
+│   │   ├── evaluation.py                      # Phase 4 — test set evaluation
+│   │   ├── train_text_to_image_lora_sdxl.py   # Bundled from diffusers v0.37.1
+│   │   └── LoRA Weights/                      # Pre-trained LoRAs (~440 MB)
+│   │       └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
+│   └── stable-diffusion-xl-base-dora/         # Exp E — SDXL DoRA (rank 8)
+│       ├── fine_tuned_DoRA.py                 # Phase 1 — DoRA fine-tuning wrapper
+│       ├── generate_images.py                 # Phase 2 — synthetic generation
+│       ├── panderm_classifiers.py             # Phase 3 — shared logic with Exp C
+│       ├── evaluation.py                      # Phase 4 — shared logic with Exp C
+│       ├── train_dreambooth_lora_sdxl.py       # Bundled from diffusers v0.37.1
+│       └── LoRA Weights/                      # Pre-trained DoRAs (~240 MB)
+│           └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
 ├── README.md
 └── requirements.txt
 ```
@@ -39,13 +66,18 @@ dermadiff/
 
 ```
    ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐   ┌──────────────────┐   ┌─────────────┐
-   │ 0_dataset_prep  │ → │ fine_tuned_LoRA │ → │ generate_images │ → │ panderm_         │ → │ evaluation  │
+   │ 0_dataset_prep  │ → │ fine_tuned_*    │ → │ generate_images │ → │ panderm_         │ → │ evaluation  │
    │                 │   │                 │   │                 │   │   classifiers    │   │             │
-   │ HAM splits +    │   │ SDXL + LoRA     │   │ Synthetic       │   │ PanDerm ViT-L    │   │ Macro F1,   │
-   │ per-class pool  │   │ (per class)     │   │ dermoscopic img │   │ (real + synth)   │   │ per-class   │
+   │ HAM splits +    │   │ SDXL + LoRA or  │   │ Synthetic       │   │ PanDerm ViT-L    │   │ Macro F1,   │
+   │ per-class pool  │   │ DoRA (per class)│   │ dermoscopic img │   │ (real + synth)   │   │ per-class   │
    └─────────────────┘   └─────────────────┘   └─────────────────┘   └──────────────────┘   └─────────────┘
-        (root)                  models/stable-diffusion-xl-base/
+        (root)                  models/stable-diffusion-xl-base[-dora]/
 ```
+
+Each experiment directory under `models/` follows the same Phase 1-4 structure.
+Phase 3 and Phase 4 scripts are identical between Exp C and Exp E — the
+classifier and evaluation logic consume images from a directory regardless of
+which generator produced them.
 
 ## Setup
 
@@ -53,27 +85,24 @@ dermadiff/
 # 1. Install base Python dependencies
 pip install -r requirements.txt
 
-# 2. Clone diffusers at the exact version used for the published results
-#    Phase 1 uses train_text_to_image_lora_sdxl.py from this repo.
-#    The version check inside that script requires diffusers installed
-#    FROM SOURCE (not from PyPI), so we pin to release tag v0.30.0
-#    for reproducibility.
-git clone --branch v0.30.0 https://github.com/huggingface/diffusers.git
-pip install ./diffusers
-
-# 3. Clone PanDerm (Phase 3 uses its run_class_finetuning.py script)
+# 2. Clone PanDerm (Phase 3 uses its run_class_finetuning.py script)
 git clone https://github.com/SiyuanYan1/PanDerm.git
 ```
 
+Phase 1 training scripts are **bundled in this repo** from diffusers v0.37.1,
+so you do not need to clone diffusers separately. If you prefer to use your
+own diffusers checkout, pass `--diffusers_dir /path/to/diffusers` to the
+Phase 1 wrapper — the bundled script is used as a fallback.
+
 ### Reproducibility Notes
 
-**Why diffusers is pinned to `v0.30.0`:** The SDXL LoRA training script
-(`train_text_to_image_lora_sdxl.py`) contains a `check_min_version()` call at
-the top that requires diffusers be installed from source, not from PyPI. The
-DermaDiff C3 results (Macro F1 = 0.8409) were produced using the
-`train_text_to_image_lora_sdxl.py` script from diffusers `v0.30.0`. Using a
-different version may produce slightly different LoRA weights, which could
-affect downstream synthetic image quality and final classifier metrics.
+**Bundled training scripts:** Both `train_text_to_image_lora_sdxl.py` (Exp C)
+and `train_dreambooth_lora_sdxl.py` (Exp E) are committed directly from
+diffusers v0.37.1. They are treated as read-only reference code — the Phase 1
+wrappers (`fine_tuned_LoRA.py`, `fine_tuned_DoRA.py`) have a
+`resolve_train_script()` helper that prefers these bundled scripts, with
+`--diffusers_dir` as an optional override. This eliminates the need to install
+diffusers from source.
 
 **PanDerm PyTorch compatibility:** Phase 3 automatically patches PanDerm's
 `run_class_finetuning.py` to add `weights_only=False` to its `torch.load()`
@@ -119,17 +148,17 @@ Download the two image zips + metadata, unpack into the same layout above.
 
 ### 2. ISIC 2019 (optional) — auto-downloadable
 
-Used as a supplementary source for LoRA training images. Your teammate's
+Used as a supplementary source for fine-tuning images. Your teammate's
 `dataset/isic2019.py` script handles the download. See that script's
 docstring for exact usage.
 
 Phase 0 works without ISIC 2019 if you omit the `--isic_images` flag —
-only HAM10000 train-split images will be used for LoRA training, which
-produces weaker LoRAs for small classes (df, vasc) but is still functional.
+only HAM10000 train-split images will be used for fine-tuning, which
+produces weaker adapters for small classes (df, vasc) but is still functional.
 
 ### 3. Longitudinal Dataset (optional) — access-restricted, manual only
 
-The longitudinal dermoscopic dataset used for the published DermaDiff C3
+The longitudinal dermoscopic dataset used for the published DermaDiff Exp C
 results originates from the University of Queensland (UQ) and is
 access-restricted. **It cannot be redistributed in this repository**, and
 there is no download script. If you want to reproduce the exact published
@@ -157,7 +186,7 @@ training pool:
 command. Phase 0 will gracefully fall back to using only HAM10000 (and
 optionally ISIC 2019) for the per-class training pool. The resulting LoRAs
 will train on fewer minority-class images, which may slightly reduce
-downstream classifier performance — the published C3 Macro F1 = 0.8409 was
+downstream classifier performance — the published Exp C Macro F1 = 0.8409 was
 achieved with all three sources combined.
 
 ## Phase 0 — Dataset Preparation (root)
@@ -180,135 +209,29 @@ python 0_dataset_prep.py \
 ```
 
 Outputs:
-- `outputs/ham10000_splits.json` — used by Phases 3 (auto train counts) and 3 (CSV building)
+- `outputs/ham10000_splits.json` — used by Phases 2 (auto train counts) and 3 (CSV building)
 - `outputs/training_images_per_class/{mel,bcc,akiec,df,vasc}/` — used by Phase 1
 - All images are **symlinked** (no disk duplication)
 
-## Phase 1 — SDXL LoRA Fine-tuning
+## Phases 1-4 — Experiment Pipelines
 
-> **⚡ Skip Phase 1 — Pre-trained LoRAs are included in this repo**
->
-> The five SDXL LoRA adapters used for the published C3 results
-> (Macro F1 = 0.8409) are bundled in this repository at
-> `models/stable-diffusion-xl-base/LoRA Weights/lora_{class}_final/`. If you
-> just want to reproduce the experiment results, you can skip Phase 1 entirely
-> and go straight to Phase 2 — generation will use the bundled LoRAs by default.
->
-> Phase 1 is only needed if you want to retrain the LoRAs from scratch (e.g.,
-> on a different dataset, with different hyperparameters, or with a different
-> set of source images).
+After Phase 0, each experiment follows the same four-phase workflow
+(fine-tune, generate, classify, evaluate). Pre-trained adapter weights are
+bundled in the repo, so you can skip Phase 1 and start from Phase 2.
 
-If you do want to re-train:
+See the README inside each experiment directory for commands, hyperparameters,
+and experiment-specific notes:
 
-```bash
-python models/stable-diffusion-xl-base/fine_tuned_LoRA.py \
-    --train_data_dir ./outputs/training_images_per_class \
-    --output_dir "./models/stable-diffusion-xl-base/LoRA Weights" \
-    --diffusers_dir ./diffusers
-```
+- **[Exp C — SDXL LoRA (rank 16)](models/stable-diffusion-xl-base/README.md)**
+- **[Exp E — SDXL DoRA (rank 8)](models/stable-diffusion-xl-base-dora/README.md)**
 
-LoRA weights are saved to:
-```
-models/stable-diffusion-xl-base/LoRA Weights/
-├── lora_mel_final/pytorch_lora_weights.safetensors
-├── lora_bcc_final/pytorch_lora_weights.safetensors
-├── lora_akiec_final/pytorch_lora_weights.safetensors
-├── lora_df_final/pytorch_lora_weights.safetensors
-└── lora_vasc_final/pytorch_lora_weights.safetensors
-```
-
-Note: SDXL LoRA uses the `pytorch_lora_weights.safetensors` format (loaded
-with `pipe.load_lora_weights()`), while the C2 SD 2.1 directory uses
-`adapter_model.safetensors` (PEFT adapter format). The folder naming is
-intentionally aligned with C2 for consistency, but the file formats inside
-differ because the upstream training scripts produce different output formats.
-
-Crash-safe: skips classes whose LoRA already exists.
-
-## Phase 2 — Synthetic Image Generation
-
-The bundled LoRA weights are loaded automatically — `--lora_dir` defaults to
-`models/stable-diffusion-xl-base/LoRA Weights/` (next to the script), so you
-only need to specify it if you trained your own LoRAs to a different location.
-
-Auto mode (recommended — derives counts from Phase 0 splits):
-
-```bash
-python models/stable-diffusion-xl-base/generate_images.py \
-    --output_dir ./outputs/synthetic_images \
-    --splits_json ./outputs/ham10000_splits.json \
-    --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
-    --ratio 2
-```
-
-Manual mode (if you don't want to use Phase 0 outputs):
-
-```bash
-python models/stable-diffusion-xl-base/generate_images.py \
-    --output_dir ./outputs/synthetic_images \
-    --train_counts mel=779 bcc=360 akiec=229 df=81 vasc=99 \
-    --ratio 2
-```
-
-Custom LoRA directory (if you re-trained Phase 1 to a non-default path):
-
-```bash
-python models/stable-diffusion-xl-base/generate_images.py \
-    --lora_dir /path/to/your/lora/weights \
-    --output_dir ./outputs/synthetic_images \
-    --splits_json ./outputs/ham10000_splits.json \
-    --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
-    --ratio 2
-```
-
-## Phase 3 — PanDerm Classifier Training
-
-```bash
-python models/stable-diffusion-xl-base/panderm_classifiers.py \
-    --ham_images ./data/ham10000/images \
-    --ham_metadata ./data/ham10000/HAM10000_metadata.csv \
-    --splits_json ./outputs/ham10000_splits.json \
-    --synthetic_dir ./outputs/synthetic_images \
-    --panderm_dir ./PanDerm \
-    --panderm_weights ./weights/panderm_pretrained.pth \
-    --output_dir ./outputs/classifier_c3_1x \
-    --ratio 1
-```
-
-## Phase 4 — Evaluation
-
-```bash
-python models/stable-diffusion-xl-base/evaluation.py \
-    --checkpoint ./outputs/classifier_c3_1x/checkpoint-best.pth \
-    --csv_path /tmp/dermadiff_classifier/ham10000_c3_1x.csv \
-    --image_dir /tmp/dermadiff_classifier/images_c3_1x \
-    --panderm_dir ./PanDerm \
-    --output_dir ./outputs/eval_c3_1x \
-    --label "C3-1x (SDXL)"
-```
-
-## Hyperparameters Reference
-
-| Phase | Parameter | Value |
-|---|---|---|
-| 0 | Split ratio | 70/15/15 |
-| 0 | Split seed | 42 |
-| 1 | LoRA rank | 16 |
-| 1 | Learning rate | 1e-4 |
-| 1 | Resolution | 1024×1024 |
-| 1 | Effective batch | 4 |
-| 2 | Inference steps | 30 |
-| 2 | Guidance scale | 7.5 |
-| 2 | Resolution | 1024×1024 |
-| 3 | PanDerm model | PanDerm_Large_FT |
-| 3 | Layer decay | 0.65 |
-| 3 | Drop path | 0.2 |
-| 3 | Mixup / CutMix | 0.8 / 1.0 |
-| 3 | Epochs | 50 (10 warmup) |
-| 3 | Learning rate | 5e-4 |
+Phase 3 (classifier) and Phase 4 (evaluation) scripts are identical between
+Exp C and Exp E — the classifier and evaluation logic consume images from a
+directory regardless of which generator produced them.
 
 ## Hardware Requirements
 
 - **Phase 0:** Any CPU (file I/O only)
-- **Phase 1-3:** NVIDIA A100 40GB+
+- **Phase 1-2:** NVIDIA A100 40GB+ (or T4 with reduced batch)
+- **Phase 3:** NVIDIA A100 40GB+
 - **Phase 4:** Any GPU with 8GB+ VRAM
