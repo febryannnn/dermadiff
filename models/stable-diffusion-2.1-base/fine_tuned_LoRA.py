@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument("--model-id", type=str,
                         default="Manojb/stable-diffusion-2-1-base",
                         help="HuggingFace model ID")
-    parser.add_argument("--resolution", type=int, default=512)
+    parser.add_argument("--resolution", type=int, default=1024)
 
     # training config
     parser.add_argument("--epochs", type=int, default=50)
@@ -113,7 +113,7 @@ CLASS_NEGATIVE_PROMPTS = {
 # Dataset Class
 class DermDiffusionDataset(Dataset):
     # initialize dataset with image paths and class name
-    def __init__(self, image_paths, class_name, resolution=512):
+    def __init__(self, image_paths, class_name, resolution=1024):
         self.image_paths = image_paths
         self.class_name = class_name
         self.resolution = resolution
@@ -264,7 +264,7 @@ def train_lora_for_class(
     learning_rate=1e-4,
     gradient_accumulation_steps=4,
     num_workers=2,
-    resolution=512,
+    resolution=1024,
     save_dir=None,
 ):
     print(f"Training LoRA for class: {class_name.upper()}")
