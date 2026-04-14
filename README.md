@@ -36,7 +36,7 @@ dermadiff/
 │   ├── ham10000.py                            # HAM10000 downloader (Harvard Dataverse API)
 │   └── isic2019.py                            # ISIC 2019 downloader (teammate's)
 ├── models/
-│   ├── stable-diffusion-2.1-base/             # Exp B: teammate's SD 2.1 LoRA
+│   ├── stable-diffusion-2.1-base/             # Exp B: SD 2.1 LoRA
 │   │   ├── fine_tuned_LoRA.py
 │   │   ├── generate_images.py
 │   │   ├── panderm_classifiers.py
@@ -49,7 +49,7 @@ dermadiff/
 │   │   ├── classifiers_training_LoRA.py        # Phase 3: classifier training
 │   │   ├── evaluation.py                      # Phase 4: test set evaluation
 │   │   ├── train_text_to_image_lora_sdxl.py   # Bundled from diffusers v0.37.1
-│   │   └── LoRA Weights/                      # Pre-trained LoRAs (~440 MB)
+│   │   └── LoRA Weights/                      # Pre-trained LoRAs 
 │   │       └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
 │   └── stable-diffusion-xl-base-dora/         # Exp E: SDXL DoRA (rank 8)
 │       ├── fine_tuned_DoRA.py                 # Phase 1: DoRA fine-tuning wrapper
@@ -57,7 +57,7 @@ dermadiff/
 │       ├── classifiers_training_DoRA.py        # Phase 3: shared logic with Exp C
 │       ├── evaluation.py                      # Phase 4: shared logic with Exp C
 │       ├── train_dreambooth_lora_sdxl.py       # Bundled from diffusers v0.37.1
-│       └── LoRA Weights/                      # Pre-trained DoRAs (~240 MB)
+│       └── LoRA Weights/                      # Pre-trained DoRAs
 │           └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
 ├── evaluation/
 │   ├── image_quality_metrics.py               # FID, LPIPS diversity, MS-SSIM across experiments
