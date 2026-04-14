@@ -3,21 +3,22 @@
 DermaDiff investigates whether diffusion-based synthetic augmentation improves
 classification of rare minority classes in the HAM10000 skin lesion dataset.
 Multiple diffusion generators are compared by training a PanDerm ViT-Large
-classifier on real + synthetic images and measuring Macro F1 across all 7
-diagnostic classes.
+classifier on real + synthetic images and measuring performance across all 7 diagnostic classes.
+
+![alt text](assets/general_pipeline.png)
 
 Pre-trained adapter weights are bundled in the repo, so results can be
 reproduced from the generation phase onward without GPU-intensive fine-tuning.
 
 ## Experiment Overview
 
-| Experiment | Generator | Rank | Published Macro F1 |
+| Experiment | Generator | Rank | Macro F1 |
 |---|---|---|---|
 | Exp A (baseline) | None (real HAM10000 only) | — | 0.8114 |
-| Exp B | SD 2.1 LoRA (teammate's) | — | 0.8218 |
-| **Exp C** | **SDXL LoRA** | **16** | **0.8409** |
-| Exp D | SD 3.5 Large | — | 0.8482 |
-| **Exp E** | **SDXL DoRA** | **8** | **0.8471** |
+| Exp B | SD 2.1 LoRA | 16 | 0.8218 |
+| Exp C | SDXL LoRA | 16 | 0.8409 |
+| Exp D | SD 3.5 Large | 64 | 0.8482 |
+| Exp E | SDXL DoRA | 8 | 0.8471 |
 
 **Key finding:** Exp E matches Exp D's classification benefit with a 3x
 smaller adapter (rank 8 vs rank 16) and a smaller base model (SDXL vs SD 3.5).
@@ -58,34 +59,28 @@ dermadiff/
 │       ├── train_dreambooth_lora_sdxl.py       # Bundled from diffusers v0.37.1
 │       └── LoRA Weights/                      # Pre-trained DoRAs (~240 MB)
 │           └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
+├── evaluation/
+│   ├── image_quality_metrics.py               # FID, LPIPS diversity, MS-SSIM across experiments
+│   ├── cross_domain_eval.py                   # OOD evaluation on PAD-UFES-20
+│   └── README.md
 ├── README.md
 └── requirements.txt
 ```
 
 ## Pipeline Overview
 
-```
-   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐   ┌──────────────────┐   ┌─────────────┐
-   │ 0_dataset_prep  │ → │ fine_tuned_*    │ → │ generate_images │ → │ panderm_         │ → │ evaluation  │
-   │                 │   │                 │   │                 │   │   classifiers    │   │             │
-   │ HAM splits +    │   │ SDXL + LoRA or  │   │ Synthetic       │   │ PanDerm ViT-L    │   │ Macro F1,   │
-   │ per-class pool  │   │ DoRA (per class)│   │ dermoscopic img │   │ (real + synth)   │   │ per-class   │
-   └─────────────────┘   └─────────────────┘   └─────────────────┘   └──────────────────┘   └─────────────┘
-        (root)                  models/stable-diffusion-xl-base[-dora]/
-```
+![alt text](assets/model_spesific_pipeline.png)
 
-Each experiment directory under `models/` follows the same Phase 1-4 structure.
-Phase 3 and Phase 4 scripts are identical between Exp C and Exp E — the
-classifier and evaluation logic consume images from a directory regardless of
-which generator produced them.
+Each experiment directory under `models/` follows the same Phase structure.
+
 
 ## Setup
 
 ```bash
-# 1. Install base Python dependencies
+# Install base Python dependencies
 pip install -r requirements.txt
 
-# 2. Clone PanDerm (Phase 3 uses its run_class_finetuning.py script)
+# Clone PanDerm 
 git clone https://github.com/SiyuanYan1/PanDerm.git
 ```
 
@@ -220,14 +215,7 @@ After Phase 0, each experiment follows the same four-phase workflow
 bundled in the repo, so you can skip Phase 1 and start from Phase 2.
 
 See the README inside each experiment directory for commands, hyperparameters,
-and experiment-specific notes:
-
-- **[Exp C — SDXL LoRA (rank 16)](models/stable-diffusion-xl-base/README.md)**
-- **[Exp E — SDXL DoRA (rank 8)](models/stable-diffusion-xl-base-dora/README.md)**
-
-Phase 3 (classifier) and Phase 4 (evaluation) scripts are identical between
-Exp C and Exp E — the classifier and evaluation logic consume images from a
-directory regardless of which generator produced them.
+and experiment-specific notes.
 
 ## Hardware Requirements
 
