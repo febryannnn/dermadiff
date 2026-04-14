@@ -1,4 +1,4 @@
-# Exp C — SDXL LoRA (rank 16)
+# Exp C - SDXL LoRA (rank 16)
 
 SDXL + LoRA fine-tuning for minority-class skin lesion generation. This
 experiment uses `train_text_to_image_lora_sdxl.py` (text-to-image training
@@ -6,13 +6,13 @@ with metadata.jsonl) from diffusers v0.37.1, bundled in this directory.
 
 **Published result:** Macro F1 = 0.8409
 
-## Phase 1 — LoRA Fine-tuning
+## Phase 1 - LoRA Fine-tuning
 
-> **Skip Phase 1 — Pre-trained LoRAs are included in this repo**
+> **Skip Phase 1: Pre-trained LoRAs are included in this repo**
 >
 > The five SDXL LoRA adapters used for the published results are bundled at
 > `LoRA Weights/lora_{class}_final/` (~89 MB each, ~440 MB total). To
-> reproduce results, skip to Phase 2 — generation uses the bundled weights
+> reproduce results, skip to Phase 2. Generation uses the bundled weights
 > by default.
 >
 > Phase 1 is only needed if you want to retrain from scratch (e.g., on a
@@ -30,17 +30,17 @@ to override with your own checkout.
 
 Crash-safe: skips classes whose weights already exist.
 
-Note: Exp B (SD 2.1) uses `adapter_model.safetensors` (PEFT adapter format)
-— different from the `pytorch_lora_weights.safetensors` format used here.
+Note: Exp B (SD 2.1) uses `adapter_model.safetensors` (PEFT adapter format),
+which is different from the `pytorch_lora_weights.safetensors` format used here.
 The folder naming is consistent across experiments, but the file formats
 differ because the upstream training scripts produce different outputs.
 
-## Phase 2 — Synthetic Image Generation
+## Phase 2 - Synthetic Image Generation
 
-Bundled weights are loaded automatically — `--lora_dir` defaults to the
+Bundled weights are loaded automatically. `--lora_dir` defaults to the
 `LoRA Weights/` directory next to the script.
 
-Auto mode (recommended — derives counts from Phase 0 splits):
+Auto mode (recommended, derives counts from Phase 0 splits):
 
 ```bash
 python models/stable-diffusion-xl-base/generate_images.py \
@@ -59,7 +59,7 @@ python models/stable-diffusion-xl-base/generate_images.py \
     --ratio 2
 ```
 
-## Phase 3 — PanDerm Classifier Training
+## Phase 3 - PanDerm Classifier Training
 
 ```bash
 python models/stable-diffusion-xl-base/classifiers_training_LoRA.py \
@@ -73,7 +73,7 @@ python models/stable-diffusion-xl-base/classifiers_training_LoRA.py \
     --ratio 1
 ```
 
-## Phase 4 — Evaluation
+## Phase 4 - Evaluation
 
 ```bash
 python models/stable-diffusion-xl-base/evaluation.py \
@@ -87,7 +87,7 @@ python models/stable-diffusion-xl-base/evaluation.py \
 
 ## Hyperparameters
 
-### Phase 1 — Fine-tuning
+### Phase 1 - Fine-tuning
 
 | Parameter | Value |
 |---|---|
@@ -102,7 +102,7 @@ python models/stable-diffusion-xl-base/evaluation.py \
 | Mixed precision | fp16 |
 | Adaptive steps | <150 img: 1500, <400: 1000, else: 800 |
 
-### Phase 2 — Generation
+### Phase 2 - Generation
 
 | Parameter | Value |
 |---|---|
@@ -110,7 +110,7 @@ python models/stable-diffusion-xl-base/evaluation.py \
 | Guidance scale | 7.5 |
 | Resolution | 1024x1024 |
 
-### Phase 3 — Classifier
+### Phase 3 - Classifier
 
 | Parameter | Value |
 |---|---|
