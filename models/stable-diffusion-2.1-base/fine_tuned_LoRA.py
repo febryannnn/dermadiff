@@ -72,7 +72,7 @@ def normalize_class(cls_name):
 
 
 # Class Prompts 
-CLASS_PROMPTS = {
+class_prompts = {
     "mel": [
         "a dermoscopic image of melanoma, irregular pigment network, blue-white veil, asymmetric pigmentation, multiple colors, irregular dots and globules, high magnification clinical dermoscopy",
         "a dermoscopic image of melanoma skin lesion, atypical network, regression structures, irregular streaks, blue-gray peppering, multicomponent pattern, sharp clinical dermoscopy image",
@@ -101,7 +101,7 @@ CLASS_PROMPTS = {
 }
 
 # negative prompts
-CLASS_NEGATIVE_PROMPTS = {
+class_negative_prompts = {
     "mel": "benign nevus, symmetric, uniform color, regular border, blurry, low quality, artifacts, text, watermark, cartoon, non-dermoscopic, overexposed",
     "bcc": "melanoma, nevus, pigment network, blurry, low quality, artifacts, text, watermark, cartoon, non-dermoscopic, overexposed",
     "akiec": "melanoma, smooth surface, no scale, blurry, low quality, artifacts, text, watermark, cartoon, non-dermoscopic, overexposed",
@@ -133,7 +133,7 @@ class DermDiffusionDataset(Dataset):
         img = Image.open(self.image_paths[idx]).convert("RGB")
         img = self.transform(img)
         # rotate through available prompts
-        prompts_pool = CLASS_PROMPTS.get(
+        prompts_pool = class_prompts.get(
             self.class_name,
             [f"a dermoscopic image of {self.class_name} skin lesion, clinical quality, high resolution"]
         )
