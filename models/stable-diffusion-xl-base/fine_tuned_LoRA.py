@@ -35,7 +35,7 @@ import sys
 import time
 
 # ────────────────────────────────────────────────────────────────────────
-# CONFIG (hardcoded — change here, not via CLI)
+# config (hardcoded — change here, not via CLI)
 # ────────────────────────────────────────────────────────────────────────
 
 SDXL_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
@@ -52,8 +52,8 @@ SEED = 42
 
 TARGET_CLASSES = ["mel", "bcc", "akiec", "df", "vasc"]
 
-# One caption per class — written into metadata.jsonl alongside each image.
-# Every image in a class receives this same caption (matches the published
+# one caption per class — written into metadata.jsonl alongside each image.
+# every image in a class receives this same caption (matches the published
 # C3 LoRA training setup).
 CLASS_CAPTIONS = {
     "mel":   "a dermoscopic photograph of a melanoma skin lesion",
@@ -120,7 +120,7 @@ def resolve_train_script(diffusers_dir):
         print(f"  WARNING: --diffusers_dir was given but no script at {candidate}")
         return None
 
-    # Bundled script lives next to this wrapper file
+    # bundled script lives next to this wrapper file
     bundled = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "train_text_to_image_lora_sdxl.py",
@@ -143,7 +143,7 @@ def train_lora_for_class(
     cls_output_dir = os.path.join(output_dir, f"lora_{cls_name}_final")
     os.makedirs(cls_output_dir, exist_ok=True)
 
-    # Skip if already trained
+    # skip if already trained
     weights_file = os.path.join(cls_output_dir, "pytorch_lora_weights.safetensors")
     if os.path.exists(weights_file):
         size_mb = os.path.getsize(weights_file) / 1024 / 1024
@@ -154,7 +154,7 @@ def train_lora_for_class(
         print(f"  SKIP {cls_name}: directory not found at {cls_data_dir}")
         return False
 
-    # Auto-generate metadata.jsonl for this class (required by text_to_image script)
+    # auto-generate metadata.jsonl for this class (required by text_to_image script)
     caption = CLASS_CAPTIONS[cls_name]
     n_images = build_metadata_jsonl(cls_data_dir, caption)
     if n_images == 0:
@@ -232,7 +232,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Resolve the training script once, up front — fail fast if missing
+    # resolve the training script once, up front — fail fast if missing
     train_script = resolve_train_script(args.diffusers_dir)
     if train_script is None:
         print("ERROR: could not find a LoRA training script.")

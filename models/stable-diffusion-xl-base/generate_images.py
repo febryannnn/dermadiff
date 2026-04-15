@@ -27,7 +27,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # ────────────────────────────────────────────────────────────────────────
-# CONFIG
+# config
 # ────────────────────────────────────────────────────────────────────────
 
 SDXL_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
@@ -40,8 +40,8 @@ BASE_SEED = 42
 
 TARGET_CLASSES = ["mel", "bcc", "akiec", "df", "vasc"]
 
-# Five rotating prompt variants per class for diverse generation.
-# These detailed dermoscopic prompts encourage the model to produce varied
+# five rotating prompt variants per class for diverse generation.
+# these detailed dermoscopic prompts encourage the model to produce varied
 # clinically relevant patterns rather than collapsing to a single look.
 CLASS_PROMPTS = {
     "mel": [
@@ -94,7 +94,7 @@ def generate_for_class(
     cls_out = os.path.join(output_dir, cls_name)
     os.makedirs(cls_out, exist_ok=True)
 
-    # Resume support: skip if already complete
+    # resume support: skip if already complete
     existing = len([f for f in os.listdir(cls_out) if f.endswith(".jpg")])
     if existing >= num_images:
         print(f"  SKIP {cls_name}: {existing} images already present")
@@ -181,8 +181,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate synthetic dermoscopic images using SDXL + LoRA"
     )
-    # Default --lora_dir to the in-repo "LoRA Weights" folder that lives
-    # next to this script. Computed from __file__ so it works regardless
+    # default --lora_dir to the in-repo "LoRA Weights" folder that lives
+    # next to this script. computed from __file__ so it works regardless
     # of which directory the user runs the script from.
     DEFAULT_LORA_DIR = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "LoRA Weights"
@@ -235,7 +235,7 @@ def main():
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Verify all LoRA weights exist before loading the pipeline
+    # verify all LoRA weights exist before loading the pipeline
     print("Checking LoRA weights...")
     missing = []
     for cls in args.classes:

@@ -31,40 +31,54 @@ hypothesis.
 
 ```
 dermadiff/
-├── dataset_prep.py                          # Phase 0: shared, builds HAM splits + per-class pool
+├── dataset_prep.py
+├── requirements.txt
+├── assets/
+│   ├── general_pipeline.png
+│   └── model_spesific_pipeline.png
 ├── dataset/
-│   ├── ham10000.py                            # HAM10000 downloader (Harvard Dataverse API)
-│   └── isic2019.py                            # ISIC 2019 downloader (teammate's)
+│   ├── ham10000.py
+│   └── isic2019.py
 ├── models/
-│   ├── stable-diffusion-2.1-base/             # Exp B: SD 2.1 LoRA
+│   ├── stable-diffusion-2.1-base/
 │   │   ├── fine_tuned_LoRA.py
 │   │   ├── generate_images.py
-│   │   ├── panderm_classifiers.py
+│   │   ├── panderm_exp_b.py
 │   │   ├── evaluation.py
+│   │   ├── requirements.txt
+│   │   └── lora-weights/
+│   │       └── lora_{mel,bcc,akiec,df,vasc}_final/adapter_model.safetensors
+│   ├── stable-diffusion-xl-base/
+│   │   ├── fine_tuned_LoRA.py
+│   │   ├── generate_images.py
+│   │   ├── classifiers_training_LoRA.py
+│   │   ├── evaluation.py
+│   │   ├── train_text_to_image_lora_sdxl.py
+│   │   ├── README.md
 │   │   └── LoRA Weights/
-│   │       └── lora_{class}_final/
-│   ├── stable-diffusion-xl-base/              # Exp C: SDXL LoRA (rank 16)
-│   │   ├── fine_tuned_LoRA.py                 # Phase 1: LoRA fine-tuning wrapper
-│   │   ├── generate_images.py                 # Phase 2: synthetic generation
-│   │   ├── classifiers_training_LoRA.py        # Phase 3: classifier training
-│   │   ├── evaluation.py                      # Phase 4: test set evaluation
-│   │   ├── train_text_to_image_lora_sdxl.py   # Bundled from diffusers v0.37.1
-│   │   └── LoRA Weights/                      # Pre-trained LoRAs 
 │   │       └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
-│   └── stable-diffusion-xl-base-dora/         # Exp E: SDXL DoRA (rank 8)
-│       ├── fine_tuned_DoRA.py                 # Phase 1: DoRA fine-tuning wrapper
-│       ├── generate_images.py                 # Phase 2: synthetic generation
-│       ├── classifiers_training_DoRA.py        # Phase 3: shared logic with Exp C
-│       ├── evaluation.py                      # Phase 4: shared logic with Exp C
-│       ├── train_dreambooth_lora_sdxl.py       # Bundled from diffusers v0.37.1
-│       └── LoRA Weights/                      # Pre-trained DoRAs
+│   ├── stable-diffusion-3.5_large/
+│   │   ├── finetune_lora.py
+│   │   ├── generate_images.py
+│   │   ├── panderm_classifier.py
+│   │   ├── evaluation.py
+│   │   ├── README.md
+│   │   └── LoRA Weights/
+│   │       └── {mel,bcc,akiec,df,vasc}/pytorch_lora_weights.safetensors
+│   └── stable-diffusion-xl-base-dora/
+│       ├── fine_tuned_DoRA.py
+│       ├── generate_images.py
+│       ├── classifiers_training_DoRA.py
+│       ├── evaluation.py
+│       ├── train_dreambooth_lora_sdxl.py
+│       ├── README.md
+│       └── LoRA Weights/
 │           └── lora_{mel,bcc,akiec,df,vasc}_final/pytorch_lora_weights.safetensors
 ├── evaluation/
-│   ├── image_quality_metrics.py               # FID, LPIPS diversity, MS-SSIM across experiments
-│   ├── cross_domain_eval.py                   # OOD evaluation on PAD-UFES-20
+│   ├── image_quality_metrics.py
+│   ├── cross_domain_eval.py
 │   └── README.md
-├── README.md
-└── requirements.txt
+└── README.md
 ```
 
 ## Pipeline Overview

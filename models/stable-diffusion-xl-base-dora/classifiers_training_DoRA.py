@@ -36,7 +36,7 @@ import sys
 import pandas as pd
 
 # ────────────────────────────────────────────────────────────────────────
-# CONFIG
+# config
 # ────────────────────────────────────────────────────────────────────────
 
 MODEL_NAME = "PanDerm_Large_FT"
@@ -53,7 +53,7 @@ CUTMIX = 1.0
 SEED = 0
 SPLIT_SEED = 42
 
-# Label mapping must match what PanDerm was pretrained with
+# label mapping must match what PanDerm was pretrained with
 LABEL_MAP = {
     "akiec": 0, "bcc": 1, "bkl": 2, "df": 3,
     "mel": 4, "nv": 5, "vasc": 6,
@@ -140,7 +140,7 @@ def build_csv(
           f"val={(base_df['split']=='val').sum()}, "
           f"test={(base_df['split']=='test').sum()}")
 
-    # Append synthetic images with subsampling for the requested ratio
+    # append synthetic images with subsampling for the requested ratio
     random.seed(SPLIT_SEED)
     synth_records = []
     for cls in TARGET_CLASSES:
@@ -184,7 +184,7 @@ def build_combined_image_dir(
     os.makedirs(combined_dir, exist_ok=True)
     existing = set(os.listdir(combined_dir))
 
-    # Symlink real HAM images (fast — no copy)
+    # symlink real HAM images (fast — no copy)
     ham_count = 0
     for fname in os.listdir(ham_images):
         if fname in existing or not fname.lower().endswith((".jpg", ".jpeg", ".png")):
@@ -195,7 +195,7 @@ def build_combined_image_dir(
         )
         ham_count += 1
 
-    # Copy synthetic images that are referenced in the CSV
+    # copy synthetic images that are referenced in the CSV
     synth_filenames = set(df["image"].tolist()) - existing
     synth_count = 0
     for cls in TARGET_CLASSES:
