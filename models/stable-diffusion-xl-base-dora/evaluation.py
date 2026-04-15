@@ -34,7 +34,7 @@ from sklearn.metrics import (
 )
 
 # ────────────────────────────────────────────────────────────────────────
-# CONFIG (must match Phase 3 training)
+# config (must match phase 3 training)
 # ────────────────────────────────────────────────────────────────────────
 
 MODEL_NAME = "PanDerm_Large_FT"
@@ -95,7 +95,7 @@ def run_panderm_eval(
     os.makedirs(output_dir, exist_ok=True)
     os.environ["WANDB_MODE"] = "disabled"
 
-    # Apply the torch.load patch before calling PanDerm's script
+    # apply the torch.load patch before calling PanDerm's script
     patch_panderm_torch_load(panderm_dir)
 
     classification_dir = os.path.join(panderm_dir, "classification")
