@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
-DermaDiff — Phase 0: Dataset Preparation
+DermaDiff - Phase 0: Dataset Preparation
 ==========================================
 
 Prepares the per-class training image pool used by Phase 1 (LoRA fine-tuning).
 
 This script does four things:
 
-1. **Builds HAM10000 stratified splits** — 70/15/15 train/val/test by 'dx' label,
+1. Builds HAM10000 stratified splits: 70/15/15 train/val/test by 'dx' label,
    saved as JSON with image IDs (used by Phase 3 classifier training).
 
-2. **Extracts longitudinal minority images** — walks the longitudinal Excel
+2. **Extracts longitudinal minority images: walks the longitudinal Excel
    metadata, maps each image to its 'Diagnosis' column, and organizes them
    into per-class folders matching HAM10000 label names (mel, bcc, akiec, df).
 
-3. **Builds the combined per-class training pool** for Phase 1, applying the
+3. Builds the combined per-class training pool: for Phase 1, applying the
    filtering rule: HAM10000 train split only (no val/test leakage), but ALL
    ISIC 2019 and longitudinal images.
 
-4. **Symlinks instead of copies** — no disk space duplication. The output
+4. Symlinks instead of copies: no disk space duplication. The output
    directory contains symlinks pointing to the original files in their
    source locations.
 
@@ -48,19 +48,19 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-# ────────────────────────────────────────────────────────────────────────
-# CONFIG (hardcoded — change here, not via CLI)
-# ────────────────────────────────────────────────────────────────────────
+# --------
+# CONFIG 
+# --------
 
 SPLIT_SEED = 42
 TRAIN_RATIO = 0.70
 VAL_RATIO = 0.15
 TEST_RATIO = 0.15
 
-# The 5 minority classes targeted for LoRA training and synthetic generation
+# the 5 minority classes targeted for LoRA training and synthetic generation
 TARGET_CLASSES = ["mel", "bcc", "akiec", "df", "vasc"]
 
-# ISIC 2019 folder name → HAM10000 label
+# ISIC 2019 folder name to HAM10000 label
 ISIC_TO_HAM = {
     "MEL (malignant)":  "mel",
     "BCC (malignant)":  "bcc",
@@ -69,10 +69,9 @@ ISIC_TO_HAM = {
     "DF (low risk)":    "df",
     "NV (low risk)":    "nv",
     "VASC (low risk)":  "vasc",
-    # SCC is ISIC-only — not in HAM10000 taxonomy, dropped
 }
 
-# Longitudinal Diagnosis column → HAM10000 label
+# longitudinal Diagnosis column to HAM10000 label
 LONGITUDINAL_TO_HAM = {
     "melanoma":             "mel",
     "basal cell carcinoma": "bcc",
@@ -80,15 +79,15 @@ LONGITUDINAL_TO_HAM = {
     "dermatofibroma":       "df",
 }
 
-# Excel column containing the longitudinal image filenames
+# excel column containing the longitudinal image filenames
 LONGITUDINAL_IMG_COL = "Dermoscopic_Image_ID*(ParticipantID_LesionID_visitID)"
 
 IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
 
 
-# ────────────────────────────────────────────────────────────────────────
-# 1. HAM10000 STRATIFIED SPLIT
-# ────────────────────────────────────────────────────────────────────────
+# -----------------------------
+#  HAM10000 STRATIFIED SPLIT
+# -----------------------------
 
 def build_ham_splits(ham_metadata: str, output_splits: str) -> dict:
     """Build a 70/15/15 stratified train/val/test split for HAM10000.
@@ -108,12 +107,12 @@ def build_ham_splits(ham_metadata: str, output_splits: str) -> dict:
     labels = ham_df["dx"].values
     indices = np.arange(len(ham_df))
 
-    # First split: train vs (val + test)
+    # first split: train vs (val + test)
     train_idx, temp_idx = train_test_split(
         indices, test_size=(VAL_RATIO + TEST_RATIO),
         stratify=labels, random_state=SPLIT_SEED,
     )
-    # Second split: val vs test
+    # second split: val vs test
     relative_test = TEST_RATIO / (VAL_RATIO + TEST_RATIO)
     val_idx, test_idx = train_test_split(
         temp_idx, test_size=relative_test,
@@ -146,9 +145,9 @@ def build_ham_splits(ham_metadata: str, output_splits: str) -> dict:
     return splits
 
 
-# ────────────────────────────────────────────────────────────────────────
-# 2. LONGITUDINAL EXTRACTION
-# ────────────────────────────────────────────────────────────────────────
+# -------------------------
+# LONGITUDINAL EXTRACTION
+# -------------------------
 
 def extract_longitudinal(
     longitudinal_dir: str,
@@ -165,7 +164,7 @@ def extract_longitudinal(
         print("  No longitudinal metadata files provided — skipping")
         return {}
 
-    # Load and combine metadata sheets
+    # load and combine metadata sheets
     dfs = []
     for meta_file in metadata_files:
         if not os.path.exists(meta_file):
@@ -177,7 +176,7 @@ def extract_longitudinal(
     all_meta = pd.concat(dfs, ignore_index=True)
     print(f"  Loaded {len(all_meta)} longitudinal metadata entries")
 
-    # Build filename → full path lookup (avoids slow per-row searches)
+    # build filename to full path lookup
     print(f"  Scanning {longitudinal_dir} for image files...")
     img_lookup = {}
     for root, _, files in os.walk(longitudinal_dir):
@@ -186,7 +185,7 @@ def extract_longitudinal(
                 img_lookup[f] = os.path.join(root, f)
     print(f"  Found {len(img_lookup)} candidate images on disk")
 
-    # Map each metadata row to a real image path
+    # map each metadata row to a real image path
     if LONGITUDINAL_IMG_COL not in all_meta.columns:
         print(f"  ERROR: column {LONGITUDINAL_IMG_COL!r} not found in metadata")
         print(f"  Available columns: {list(all_meta.columns)}")
@@ -196,7 +195,7 @@ def extract_longitudinal(
     matched = all_meta["image_path"].notna().sum()
     print(f"  Matched {matched}/{len(all_meta)} images to file paths")
 
-    # Filter to relevant minority classes
+    # filter to relevant minority classes
     relevant = all_meta[
         all_meta["Diagnosis"].isin(LONGITUDINAL_TO_HAM.keys())
         & all_meta["image_path"].notna()
@@ -204,7 +203,7 @@ def extract_longitudinal(
     relevant["dx"] = relevant["Diagnosis"].map(LONGITUDINAL_TO_HAM)
     print(f"  Relevant minority entries: {len(relevant)}")
 
-    # Symlink each image into per-class folders
+    # symlink each image into per-class folders
     counts = {cls: 0 for cls in set(LONGITUDINAL_TO_HAM.values())}
     for _, row in relevant.iterrows():
         cls = row["dx"]
@@ -225,9 +224,9 @@ def extract_longitudinal(
     return counts
 
 
-# ────────────────────────────────────────────────────────────────────────
-# 3. BUILD COMBINED PER-CLASS TRAINING POOL
-# ────────────────────────────────────────────────────────────────────────
+# --------------------------------------------
+# BUILD COMBINED PER-CLASS TRAINING POOL
+# --------------------------------------------
 
 def build_training_pool(
     ham_images: str,
@@ -263,7 +262,7 @@ def build_training_pool(
     for cls in TARGET_CLASSES:
         os.makedirs(os.path.join(output_dir, cls), exist_ok=True)
 
-    # ── 1) HAM10000 (train split only) ──
+    # HAM10000
     print("  Symlinking HAM10000 train-split images...")
     for _, row in ham_train_df.iterrows():
         dx = row["dx"]
@@ -281,7 +280,7 @@ def build_training_pool(
         counts[dx] += 1
     print(f"    HAM10000 contribution: { {k: v for k, v in counts.items()} }")
 
-    # ── 2) ISIC 2019 (all images) ──
+    # ISIC 2019
     if isic_images and os.path.isdir(isic_images):
         print("  Symlinking ISIC 2019 images...")
         before = dict(counts)
@@ -295,7 +294,6 @@ def build_training_pool(
                 if not fname.lower().endswith(IMG_EXTS):
                     continue
                 src = os.path.join(cls_dir, fname)
-                # Prefix to avoid filename collisions with HAM10000
                 dst = os.path.join(output_dir, ham_label, f"isic_{fname}")
                 if os.path.exists(dst):
                     counts[ham_label] += 1
@@ -307,7 +305,7 @@ def build_training_pool(
     else:
         print("  ISIC 2019 directory not found — skipping")
 
-    # ── 3) Longitudinal (all extracted images) ──
+    # Longitudinal
     if longitudinal_dir and os.path.isdir(longitudinal_dir):
         print("  Symlinking longitudinal extracted images...")
         before = dict(counts)
@@ -319,7 +317,6 @@ def build_training_pool(
                 if not fname.lower().endswith(IMG_EXTS):
                     continue
                 src = os.path.join(cls_dir, fname)
-                # Resolve symlinks to a real file before re-symlinking
                 if os.path.islink(src):
                     src = os.path.realpath(src)
                 dst = os.path.join(output_dir, cls, f"long_{fname}")
@@ -336,9 +333,9 @@ def build_training_pool(
     return counts
 
 
-# ────────────────────────────────────────────────────────────────────────
+# --------------
 # MAIN
-# ────────────────────────────────────────────────────────────────────────
+# --------------
 
 def main():
     parser = argparse.ArgumentParser(
@@ -366,11 +363,11 @@ def main():
     print("  Phase 0: Dataset Preparation")
     print("=" * 60)
 
-    # Step 1: HAM10000 splits
+    # step 1: HAM10000 splits
     print("\n[1/3] Building HAM10000 stratified splits...")
     splits = build_ham_splits(args.ham_metadata, args.output_splits)
 
-    # Step 2: Longitudinal extraction (optional)
+    # step 2: longitudinal extraction 
     if args.longitudinal_dir and args.longitudinal_metadata:
         print("\n[2/3] Extracting longitudinal minority images...")
         long_dir = args.output_longitudinal_dir or os.path.join(
@@ -383,7 +380,7 @@ def main():
         print("\n[2/3] Skipping longitudinal extraction (no metadata provided)")
         long_dir = None
 
-    # Step 3: Build the combined per-class training pool
+    # step 3: build the combined per-class training pool
     print("\n[3/3] Building per-class training pool for Phase 1...")
     counts = build_training_pool(
         ham_images=args.ham_images,
@@ -394,7 +391,6 @@ def main():
         output_dir=args.output_per_class_dir,
     )
 
-    # Summary
     print(f"\n{'=' * 60}")
     print(f"  DONE — Per-class training pool: {args.output_per_class_dir}")
     print(f"{'=' * 60}")
